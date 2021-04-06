@@ -1,8 +1,6 @@
 package jsonxml
 
 import (
-	"encoding/json"
-	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -11,86 +9,66 @@ import (
 )
 
 type JSONXML struct {
-	DataPath string
+	DataPath   string
+	OutputPath string
+	MaxFiles   int
 }
 
 type Output struct {
 	Post []string `xml:"post"`
-	Date []string `xml:"date"`
+}
+
+func Combine() {
+
 }
 
 func (j *JSONXML) Init() {
-	files, err := j.readDir()
-
-	if err != nil {
-		errorHandler(err)
-	}
+	files := j.readDir()
+	var data []string
+	var str string
 
 	consoleOutput(fmt.Sprintf("Found %d files", len(files)))
-	for i := 0; i < 10; i++ {
-		j.parseFile(files[i])
+
+	for i := 0; i < 100; i++ {
+		data = append(data, j.parseFile(files[i]).Post...)
 	}
+
+	for i := 0; i < len(data); i++ {
+		str += strings.TrimSpace(data[i])
+	}
+
+	j.writeTxt(str)
+	size := len(str)
+	consoleOutput(fmt.Sprintf("Wrote %d bytes to disk", size))
+	consoleOutput("Done")
 }
 
-func (j *JSONXML) readDir() ([]string, error) {
-	var filesNames []string
+func (j *JSONXML) Output(output Output) {
+	var s string
 
-	files, err := ioutil.ReadDir(j.DataPath)
-
-	if err != nil {
-		return nil, err
+	for _, v := range output.Post {
+		s += strings.TrimSpace(v)
 	}
 
-	for _, val := range files {
-		filesNames = append(filesNames, fmt.Sprintf("%s/%s", j.DataPath, val.Name()))
-	}
-
-	return filesNames, nil
+	j.writeTxt(s)
 }
 
-// 5114.male.25.indUnk.Scorpio.xml
-func (j *JSONXML) parseFile(filename string) {
-	var formatted []map[string]interface{}
-	var dest Output
-
-	bytes, err := ioutil.ReadFile(filename)
-
-	if err != nil {
-		errorHandler(err)
-	}
-
-	if err := xml.Unmarshal(bytes, &dest); err != nil {
-		//fmt.Printf("error in: %s\n", filename)
-		errorHandler(err)
-	}
-
-	for i := 0; i < len(dest.Post); i++ {
-		formatted = append(formatted, map[string]interface{}{
-			"post": strings.TrimSpace(dest.Post[i]),
-			"date": dest.Date[i],
-		})
-	}
-
-	writeResult(formatted)
-}
-
-func writeResult(v interface{}) {
-	bytes, err := json.Marshal(v)
-	outputDir := "./output"
-
-	if err != nil {
-		errorHandler(err)
-	}
-
-	if err := ioutil.WriteFile(fmt.Sprintf("%s/%s.%s", outputDir, utils.RandSeq(20), "json"), bytes, 0644); err != nil {
+func (j *JSONXML) writeTxt(v string) {
+	if len(v) > 0 {
+		err := ioutil.WriteFile(fmt.Sprintf("%s/%s.%s", j.OutputPath, utils.RandSeq(20), "txt"), []byte(v), 0644)
 		errorHandler(err)
 	}
 }
 
 func consoleOutput(str string) {
-	fmt.Printf("----- %s -----\n", str)
+	fmt.Printf("---> %s \n", str)
 }
 
 func errorHandler(err error) {
+	if err != nil {
+		//log.Fatal(err)
+		//fmt.Println("An error")
+	}
+
 	//fmt.Println(err)
 }
